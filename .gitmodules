@@ -1,0 +1,6 @@
+[submodule "esp-protocols"]
+	path = esp-protocols
+	url = https://github.com/MilestoneConsult/esp-protocols
+[submodule "mcinc_components"]
+	path = mcinc_components
+	url = https://github.com/MilestoneConsult/mcinc-esp32-components.git
