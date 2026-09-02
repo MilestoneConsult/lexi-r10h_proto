@@ -9,7 +9,9 @@ idf_component_register(
 		
 	PRIV_REQUIRES
 	
+		lexi-r10h
 		mp26053
+
 		mci_app_event
 		mci_gpio
 		mci_ping

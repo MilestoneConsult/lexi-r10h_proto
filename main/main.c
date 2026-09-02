@@ -1,4 +1,3 @@
-
 #include "freertos/FreeRTOS.h"
 
 #include "esp_event.h"
@@ -13,6 +12,7 @@
 #include "app_event.h"
 #include "charger.h"
 #include "i2c.h"
+#include "lexi-r10h.h"
 #include "mcio.h"
 #include "ping.h"
 #include "tca6408a.h"
@@ -85,7 +85,7 @@ typedef enum
 // ##############################
 // ##############################
 
-static esp_err_t modem_urc_handler(uint8_t *data, size_t len)
+static esp_err_t modem_urc_receiver(uint8_t *data, size_t len)
 {
 	while (len > 0 && (data[0] == '\r' || data[0] == '\n'))
 	{
@@ -107,11 +107,14 @@ static esp_err_t modem_urc_handler(uint8_t *data, size_t len)
 void app_main(void)
 {
 	// esp_log_level_set("command_lib", ESP_LOG_DEBUG);
-	esp_log_level_set("uart_terminal", ESP_LOG_DEBUG);
+	// esp_log_level_set("uart_terminal", ESP_LOG_DEBUG);
+	// esp_log_level_set("uart-tx", ESP_LOG_DEBUG);
+	// esp_log_level_set("uart-rx", ESP_LOG_DEBUG);
 
 	// -----
 
 	esp_netif_init();
+
 	esp_event_loop_create_default();
 	app_event_loop_create_default(4 * 1024);
 
@@ -119,11 +122,6 @@ void app_main(void)
 
 	tca6408a_initialize(I2C_NUM_0); // IO Expander
 	mcio_initialize();
-
-	charger_initialize(MCIO_BATTERY_CHARGER_ENABLE, MCIO_BATTERY_CHARGER_CONNECTED);
-	charger_power_on_setup();
-
-	// return;
 
 
 	// ********** Configure Expander IO **********
@@ -160,8 +158,37 @@ void app_main(void)
 		TCA6408A_I2C_ADDRESS_0,
 		pin_config_tca6408a_0);
 
+	// -----
 
+	charger_initialize(MCIO_BATTERY_CHARGER_ENABLE, MCIO_BATTERY_CHARGER_CONNECTED);
+	charger_power_on_setup();
+
+	// -----
+
+	lexi_initialize(
+		UART_NUM_1,
+		115200, 115200,
+		GPIO_NUM_18, GPIO_NUM_17, GPIO_NUM_20, GPIO_NUM_19,
+		1024, 1024,
+		MCIO_MODEM_RESET, MCIO_MODEM_POWER_KEY, MCIO_MODEM_PERIPHERAL_POWER_ENABLE);
+	lexi_power_on_setup();
 	
+	printf("Sleeping 30 sec After Power On Setup\n");
+	vTaskDelay(30 * 1000 / portTICK_PERIOD_MS);
+
+	while(true)
+	{
+		lexi_connect(30 * 1000);
+		printf("Sleeping 30 sec After Connect\n");
+		vTaskDelay(30 * 1000 / portTICK_PERIOD_MS);
+		
+		lexi_disconnect(30 * 1000);
+		printf("Sleeping 30 sec After Disconnect\n");
+		vTaskDelay(30 * 1000 / portTICK_PERIOD_MS);
+	}
+
+	return;
+
 	/* Configure and create the DTE */
 	esp_modem_dte_config_t dte_config = ESP_MODEM_DTE_DEFAULT_CONFIG();
 
@@ -180,7 +207,7 @@ void app_main(void)
 	esp_modem_dce_t *dce = esp_modem_new_dev(ESP_MODEM_DCE_GENERIC, &dte_config, &dce_config, netif);
 	assert(dce);
 
-	ESP_ERROR_CHECK(esp_modem_set_urc(dce, modem_urc_handler));
+	ESP_ERROR_CHECK(esp_modem_set_urc(dce, modem_urc_receiver));
 
 
 	/* Power Up Modem */
