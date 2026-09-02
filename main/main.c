@@ -173,8 +173,8 @@ void app_main(void)
 		MCIO_MODEM_RESET, MCIO_MODEM_POWER_KEY, MCIO_MODEM_PERIPHERAL_POWER_ENABLE);
 	lexi_power_on_setup();
 	
-	printf("Sleeping 30 sec After Power On Setup\n");
-	vTaskDelay(30 * 1000 / portTICK_PERIOD_MS);
+	printf("Sleeping 15 sec After Power On Setup\n");
+	vTaskDelay(15 * 1000 / portTICK_PERIOD_MS);
 
 	while(true)
 	{
