@@ -178,7 +178,7 @@ void app_main(void)
 
 	while(true)
 	{
-		lexi_connect(30 * 1000);
+		lexi_connect(60 * 1000);
 		printf("Sleeping 30 sec After Connect\n");
 		vTaskDelay(30 * 1000 / portTICK_PERIOD_MS);
 		
