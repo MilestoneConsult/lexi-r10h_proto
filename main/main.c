@@ -171,7 +171,7 @@ void app_main(void)
 		GPIO_NUM_18, GPIO_NUM_17, GPIO_NUM_20, GPIO_NUM_19,
 		1024, 1024,
 		MCIO_MODEM_RESET, MCIO_MODEM_POWER_KEY, MCIO_MODEM_PERIPHERAL_POWER_ENABLE);
-	lexi_power_on_setup();
+	lexi_power_on_setup(true /* sleep enabled */);
 	
 	printf("Sleeping 15 sec After Power On Setup\n");
 	vTaskDelay(15 * 1000 / portTICK_PERIOD_MS);
