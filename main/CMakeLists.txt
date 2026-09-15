@@ -14,6 +14,7 @@ idf_component_register(
 
 		mci_app_event
 		mci_gpio
+		mci_networking
 		mci_ping
 		
 		esp_event

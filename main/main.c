@@ -14,6 +14,7 @@
 #include "i2c.h"
 #include "lexi-r10h.h"
 #include "mcio.h"
+#include "networking.h"
 #include "ping.h"
 #include "tca6408a.h"
 
@@ -113,7 +114,7 @@ void app_main(void)
 
 	// -----
 
-	esp_netif_init();
+	networking_initialize();
 
 	esp_event_loop_create_default();
 	app_event_loop_create_default(4 * 1024);
@@ -131,7 +132,7 @@ void app_main(void)
 		(1 << (MCIO_GNSS_POWER_ENABLE & 0xFF)) |			 // GNSS Power (high => off)
 		(0 << (MCIO_GNSS_RESET & 0xFF)) |					 // GNSS Reset (low => held in reset)
 		(1 << (MCIO_MODEM_RESET & 0xFF)) |					 // Modem Reset (high / held in reset)
-		(0 << (MCIO_MODEM_PERIPHERAL_POWER_ENABLE & 0xFF)) | // Modem Peripheral Power (low => off)
+		(1 << (MCIO_MODEM_PERIPHERAL_POWER_ENABLE & 0xFF)) | // Modem Peripheral Power (low => off)
 		(0 << (MCIO_MODEM_POWER_KEY & 0xFF)) |				 // LED Green Off (high / off)
 		(1 << (MCIO_LED_GREEN & 0xFF)) |					 // LED Green Off (high / off)
 		(1 << (MCIO_BATTERY_CHARGER_ENABLE & 0xFF)) |		 // Battery Charger Enable (high / off)
@@ -166,25 +167,45 @@ void app_main(void)
 	// -----
 
 	lexi_initialize(
-		UART_NUM_1,
-		115200, 115200,
+		UART_NUM_1, 921600,
 		GPIO_NUM_18, GPIO_NUM_17, GPIO_NUM_20, GPIO_NUM_19,
 		1024, 1024,
 		MCIO_MODEM_RESET, MCIO_MODEM_POWER_KEY, MCIO_MODEM_PERIPHERAL_POWER_ENABLE);
 	lexi_power_on_setup(true /* sleep enabled */);
-	
-	printf("Sleeping 15 sec After Power On Setup\n");
-	vTaskDelay(15 * 1000 / portTICK_PERIOD_MS);
+	lexi_connect(10000);
+
+	printf("Sleeping 10 sec After Connect\n");
+	vTaskDelay(10 * 1000 / portTICK_PERIOD_MS);
+
+	int count = 0;
 
 	while(true)
 	{
-		lexi_connect(60 * 1000);
-		printf("Sleeping 30 sec After Connect\n");
-		vTaskDelay(30 * 1000 / portTICK_PERIOD_MS);
+		lexi_disconnect(count++ == 0 ? 0 : 3500);
 		
-		lexi_disconnect(30 * 1000);
-		printf("Sleeping 30 sec After Disconnect\n");
-		vTaskDelay(30 * 1000 / portTICK_PERIOD_MS);
+		printf("Sleeping 10 sec After Disconnect\n");
+		
+		vTaskDelay(10 * 1000 / portTICK_PERIOD_MS);
+
+		lexi_connect(10000);
+
+		struct addrinfo *dns_result = NULL;
+		esp_ip4_addr_t ping_target = {0};
+		if (getaddrinfo("google.com", NULL, NULL, &dns_result) == 0 && dns_result != NULL)
+		{
+			struct sockaddr_in *addr = (struct sockaddr_in *)dns_result->ai_addr;
+			ping_target.addr = addr->sin_addr.s_addr;
+			freeaddrinfo(dns_result);
+			ESP_LOGW("main", "google.com resolved to: " IPSTR, IP2STR(&ping_target));
+		}
+		
+		printf("Sleeping 15 sec After Connect\n");
+
+		for (int i = 0; i < 5; i++)
+		{
+			ping_ip_blocking(ping_target, 1, 1000);
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
+		}
 	}
 
 	return;
